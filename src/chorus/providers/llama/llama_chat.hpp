@@ -87,7 +87,7 @@ class LlamaChatParseStream {
     Delta diff_against_previous(const common_chat_msg& parsed);
 
     common_chat_parser_params _params;
-    std::string _raw_output;
+    common_chat_input _raw_output;
     common_chat_msg _previous_parse;
     bool _passthrough = false;
     std::size_t _parsed_bytes = 0;

@@ -1,8 +1,8 @@
 diff --git a/common/chat.cpp b/common/chat.cpp
-index 3502b96..354e804 100644
+index 87f1e99..e72ae2d 100644
 --- a/common/chat.cpp
 +++ b/common/chat.cpp
-@@ -35,7 +35,12 @@ using json = common_json;
+@@ -36,7 +36,12 @@ using json = common_json;
  
  static std::string format_time(const std::chrono::system_clock::time_point & now, const std::string & format) {
      auto               time       = std::chrono::system_clock::to_time_t(now);
@@ -36,7 +36,7 @@ index 6edd8b9..cba1933 100644
              } else {
                  throw raised_exception("strftime_now: failed to format time");
 diff --git a/ggml/CMakeLists.txt b/ggml/CMakeLists.txt
-index 4af7fc8..b5bb39b 100644
+index 3eacd4c..6f3f7cb 100644
 --- a/ggml/CMakeLists.txt
 +++ b/ggml/CMakeLists.txt
 @@ -10,6 +10,7 @@ set(GGML_VERSION_BASE "${GGML_VERSION_MAJOR}.${GGML_VERSION_MINOR}.${GGML_VERSIO
@@ -57,7 +57,7 @@ index 4af7fc8..b5bb39b 100644
  
  if(NOT GGML_BUILD_COMMIT)
 diff --git a/src/llama-batch.cpp b/src/llama-batch.cpp
-index 7a17b3a..99ea1c1 100644
+index 3c4b520..eb0e2f3 100644
 --- a/src/llama-batch.cpp
 +++ b/src/llama-batch.cpp
 @@ -9,6 +9,7 @@
@@ -68,7 +68,7 @@ index 7a17b3a..99ea1c1 100644
  #include <algorithm>
  #include <sstream>
  
-@@ -1316,8 +1317,9 @@ void llama_batch_compat::init(llama_batch_ext & dst, const llama_batch & batch_i
+@@ -1480,8 +1481,9 @@ void llama_batch_compat::init(llama_batch_ext & dst, const llama_batch & batch_i
  }
  
  llama_batch_compat::llama_batch_compat(llama_context * ctx, const llama_batch & batch_inp, size_t n_embd_row) {
