@@ -187,6 +187,30 @@ TEST(ChatHistory, successful_regeneration_replaces_content_without_changing_iden
     ASSERT_EQ(text(history[1]), "rerolled");
 }
 
+TEST(ChatHistory, regeneration_does_not_rewind_ids_for_later_turns) {
+    ChorusRuntime runtime;
+    auto engine = std::make_unique<SyncMockEngine>();
+    engine->tokens = {"answer"};
+    ASSERT_TRUE(load_runtime(runtime, std::move(engine), {}).ok());
+    GenerationRequest turn;
+    turn.prompt = "hello";
+    turn.session_id = "a";
+    ASSERT_TRUE(runtime.submit(turn).ok());
+    turn.session_id = "b";
+    ASSERT_TRUE(runtime.submit(turn).ok());
+    drain_runtime_events(runtime);
+
+    GenerationRequest reroll;
+    reroll.session_id = "a";
+    ASSERT_TRUE(runtime.regenerate(reroll).ok());
+    drain_runtime_events(runtime);
+
+    const auto next = runtime.submit(turn);
+    ASSERT_TRUE(next.ok());
+    ASSERT_EQ(next.request_message_id, 4);
+    ASSERT_EQ(next.response_message_id, 5);
+}
+
 TEST(ChatHistory, regeneration_restores_the_exact_reply_after_cancellation) {
     ChorusRuntime runtime;
     auto engine = std::make_unique<SyncMockEngine>();
