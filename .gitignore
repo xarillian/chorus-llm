@@ -1,7 +1,6 @@
 # Local workflow and tooling
 /.cache/
 /.vscode/
-/.agents/
 /.codex/
 /.omp/
 /.docs/
@@ -10,6 +9,7 @@
 /CLAUDE.md
 /compile_commands.json
 /TODO.md
+/.agents/plans
 
 # Build and generated directories
 /bin/
