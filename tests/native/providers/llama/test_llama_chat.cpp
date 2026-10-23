@@ -34,8 +34,7 @@ static common_chat_templates_ptr make_templates() {
 // common_chat_parser_params(common_chat_params&) ctor copies only format and
 // generation_prompt, but drops the PEG
 // parser; common_chat_parse falls back to a content-only parser on an empty
-// arena (chat.cpp:2859) and never splits <think>. The arena is loaded from
-// params.parser explicitly (upstream idiom: test-chat.cpp:1003).
+// arena and never splits <think>.
 static common_chat_parser_params think_parser_params() {
     auto tmpls = make_templates();
     common_chat_templates_inputs inputs;
@@ -48,8 +47,7 @@ static common_chat_parser_params think_parser_params() {
     inputs.reasoning_format = COMMON_REASONING_FORMAT_AUTO;
     common_chat_params params = common_chat_templates_apply(tmpls.get(), inputs);
     common_chat_parser_params parser_params(params);
-    parser_params.reasoning_format = COMMON_REASONING_FORMAT_AUTO;
-    parser_params.parser.load(params.parser);
+    parser_params.parser = std::move(params.parser);
     return parser_params;
 }
 

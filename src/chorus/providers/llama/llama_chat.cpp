@@ -69,14 +69,13 @@ std::variant<LlamaChatRender, RequestRejection> render_llama_chat(
     try {
         common_chat_params params = common_chat_templates_apply(selected_chat_templates, inputs);
         LlamaChatRender render;
-        render.prompt = std::move(params.prompt);
+        render.prompt = params.prompt.str();
         render.template_stop_sequences = std::move(params.additional_stops);
         render.supports_thinking = params.supports_thinking;
         render.parser_params = common_chat_parser_params(params);
-        render.parser_params.reasoning_format = COMMON_REASONING_FORMAT_AUTO;
         // The convenience constructor does not retain the compiled PEG parser.
         // Without it, response parsing silently treats reasoning as visible content.
-        render.parser_params.parser.load(params.parser);
+        render.parser_params.parser = std::move(params.parser);
         return render;
     } catch (const std::exception& e) {
         return RequestRejection{
@@ -96,7 +95,7 @@ LlamaChatParseStream::LlamaChatParseStream(common_chat_parser_params params) : _
 LlamaChatParseStream::Delta LlamaChatParseStream::push(const std::string& piece) {
     if (_passthrough)
         return Delta{piece, {}};
-    _raw_output += piece;
+    _raw_output.append(piece, LLAMA_TOKEN_NULL);
 
     // Re-parsing the complete buffer after every reasoning token would make
     // streaming quadratic. Waiting for about one-sixteenth of the parsed size
