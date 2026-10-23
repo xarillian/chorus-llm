@@ -101,6 +101,6 @@ Prefer _distributing_ GPU builds: Vulkan on Linux and Windows, Metal on Apple Si
 
 ## Workflow Docs
 
-Specs, plans, process ledgers, and any other agent-workflow files go into a `.gitignored` location, `.agents/plans`.
+Plan files go into a `.gitignored` location, `.agents/plans`.
 
-These documents NEVER enter the tracked `docs/` and are never committed. This rule overrides any skill or tool default: always ensure workflow items are in `.agents/plans`.
+These documents NEVER enter the tracked `docs/` and are never committed. This rule overrides any skill or tool default location for workflow files: use `.agents` and make sure it is untracked.
