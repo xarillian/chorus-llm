@@ -7,6 +7,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <variant>
 #include <vector>
 
 // Model-free: exercises the factory seam, not llama.cpp.
@@ -62,14 +63,18 @@ TEST(EngineFactory, Factory_creates_llama_engine_uninitialized) {
 }
 
 TEST(EngineFactory, Factory_shapes_initial_models_by_provider_policy) {
-    const auto llama = Chorus::make_initial_model_spec(Chorus::Provider::Llama, "hero-model", "models/hero.gguf");
+    const auto llama = std::get<Chorus::InitialModelSpec>(
+        Chorus::make_initial_model_spec(Chorus::Provider::Llama, "hero-model", "models/hero.gguf")
+    );
     ASSERT_EQ(llama.model_id, std::string("hero-model"));
     ASSERT_TRUE(llama.format == Chorus::ModelFormat::Gguf);
     ASSERT_EQ(llama.assets.size(), size_t{1});
     ASSERT_TRUE(llama.assets[0].role == Chorus::AssetRole::Weights);
     ASSERT_EQ(llama.assets[0].source, std::string("models/hero.gguf"));
 
-    const auto echo = Chorus::make_initial_model_spec(Chorus::Provider::Echo, "ignored", "ignored.gguf");
+    const auto echo = std::get<Chorus::InitialModelSpec>(
+        Chorus::make_initial_model_spec(Chorus::Provider::Echo, "ignored", "ignored.gguf")
+    );
     ASSERT_TRUE(echo.model_id.empty());
     ASSERT_TRUE(echo.format == Chorus::ModelFormat::Auto);
     ASSERT_TRUE(echo.assets.empty());

@@ -343,24 +343,23 @@ void GodotChorus::_process(double /*delta*/) {
 Ref<ChorusLoadResult> GodotChorus::load_model() {
     Ref<ChorusLoadResult> result;
     result.instantiate();
-    if (_provider != PROVIDER_ECHO && _model_path.is_empty()) {
-        result->set_result(-1, ERR_INVALID_REQUEST, "model_path is not set.");
-        return result;
-    }
-
     const Chorus::Provider provider = to_chorus_provider(_provider);
-    Chorus::ChorusConfig config;
-    config.log_level = effective_log_level();
     const String filesystem_path = _model_path.begins_with("res://") || _model_path.begins_with("user://")
                                        ? ProjectSettings::get_singleton()->globalize_path(_model_path)
                                        : _model_path;
-    config.model = Chorus::make_initial_model_spec(
+    auto model = Chorus::make_initial_model_spec(
         provider,
         std::string(_model_path.get_file().get_basename().utf8().get_data()),
         std::string(filesystem_path.utf8().get_data())
     );
-    // Echo accepts an empty `Chorus::InitialModelSpec` and declares no load
-    // options, so this generic path contributes nothing without a special case.
+    if (const auto* rejection = std::get_if<Chorus::RequestRejection>(&model)) {
+        result->set_result(-1, to_godot(rejection->error), to_godot_string(rejection->message));
+        return result;
+    }
+
+    Chorus::ChorusConfig config;
+    config.log_level = effective_log_level();
+    config.model = std::get<Chorus::InitialModelSpec>(std::move(model));
     const auto& caps = provider_capabilities();
     if (!caps.load_options.empty())
         config.provider_options[caps.provider_id] = Chorus::resolve_option_defaults(caps.load_options, _load_options);

@@ -4,6 +4,7 @@
 #include <exception>
 #include <string>
 #include <utility>
+#include <variant>
 
 struct chorus_options {
     Chorus::ProviderOptionMap values;
@@ -122,14 +123,16 @@ chorus_error chorus_load(
     Chorus::LogLevel cpp_log_level = Chorus::LogLevel::Warn;
     if (!to_cpp_log_level(min_log_level, cpp_log_level))
         return invalid_request(rt, "Unknown log level.");
-    if (provider == CHORUS_PROVIDER_LLAMA && !model_path)
-        return invalid_request(rt, "model_path is required for the Llama provider.");
 
     try {
+        const std::string model_source = model_path ? model_path : "";
+        auto model = Chorus::make_initial_model_spec(cpp_provider, model_source, model_source);
+        if (const auto* rejection = std::get_if<Chorus::RequestRejection>(&model))
+            return invalid_request(rt, rejection->message);
+
         Chorus::ChorusConfig config;
         config.log_level = cpp_log_level;
-        const std::string model_source = model_path ? model_path : "";
-        config.model = Chorus::make_initial_model_spec(cpp_provider, model_source, model_source);
+        config.model = std::get<Chorus::InitialModelSpec>(std::move(model));
         if (options && !options->values.empty())
             config.provider_options[provider_id] = options->values;
 
