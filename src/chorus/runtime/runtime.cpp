@@ -239,14 +239,17 @@ SubmitResult ChorusRuntime::admit(std::unique_ptr<PreparationJob> job, MessageNo
     const bool occupies = generation || job->operation == Operation::Embed;
     SubmitResult result;
     result.request_id = _next_request_id;
+    auto next_message_id = _next_message_id;
     if (generation && session) {
         if (replaced_reply) {
             result.response_message_id = replaced_reply->value.id;
         } else {
-            if (!_next_message_id || *_next_message_id > INT64_MAX - 1)
+            if (!next_message_id || *next_message_id > INT64_MAX - 1)
                 return rejection(ChorusError::InvalidRequest, "Message identity capacity is exhausted.");
-            result.request_message_id = _next_message_id;
-            result.response_message_id = *_next_message_id + 1;
+            const MessageId response = *next_message_id + 1;
+            result.request_message_id = next_message_id;
+            result.response_message_id = response;
+            next_message_id = response == INT64_MAX ? std::nullopt : std::optional<MessageId>{response + 1};
         }
     }
     if (session && !replaced_reply) {
@@ -302,10 +305,7 @@ SubmitResult ChorusRuntime::admit(std::unique_ptr<PreparationJob> job, MessageNo
     }
     if (changed_history)
         _histories.at(session.value()).messages = std::move(changed_history);
-    if (result.request_message_id)
-        _next_message_id = *result.response_message_id == INT64_MAX
-                               ? std::nullopt
-                               : std::optional<MessageId>{*result.response_message_id + 1};
+    _next_message_id = next_message_id;
     ++_next_request_id;
     ++state.outstanding;
     lock.unlock();
