@@ -1,5 +1,6 @@
 #include "chorus/runtime/runtime.hpp"
 #include "chorus/runtime/runtime_preparation.hpp"
+#include "support/runtime_test_hooks.hpp"
 #include "support/runtime_test_utils.hpp"
 #include "support/sync_mock_engine.hpp"
 
@@ -182,7 +183,7 @@ struct ReleaseGate {
 
 struct ReleaseRuntimeRetirement {
     ChorusRuntime& runtime;
-    ~ReleaseRuntimeRetirement() { runtime.test_release_retirement(); }
+    ~ReleaseRuntimeRetirement() { ChorusRuntimeTestHooks::release_retirement(runtime); }
 };
 
 GenerationRequest chat(const char* session = "npc", std::string prompt = "new") {
@@ -200,7 +201,7 @@ GenerationRequest raw(std::string text) {
 
 TEST(RuntimePreparation, Gated_hook_leaves_every_admission_poll_and_cancel_responsive_with_bounded_workers_and_queue) {
     ChorusRuntime runtime;
-    runtime.test_use_preparation_workers(3);
+    ChorusRuntimeTestHooks::use_preparation_workers(runtime, 3);
     auto engine = std::make_unique<PreparationEngine>();
     auto* observed = engine.get();
     auto service = engine->service;
@@ -261,7 +262,7 @@ TEST(RuntimePreparation, Gated_hook_leaves_every_admission_poll_and_cancel_respo
 
 TEST(RuntimePreparation, An_earlier_request_that_prepares_slowly_still_reaches_the_engine_first) {
     ChorusRuntime runtime;
-    runtime.test_use_preparation_workers(3);
+    ChorusRuntimeTestHooks::use_preparation_workers(runtime, 3);
     auto engine = std::make_unique<PreparationEngine>();
     auto* observed = engine.get();
     auto service = engine->service;
@@ -578,7 +579,7 @@ TEST(RuntimePreparation, Provider_death_drains_gated_and_queued_preparation_with
 
 TEST(RuntimePreparation, Cancel_ready_work_never_forwards_and_buffered_auxiliary_success_keeps_its_terminal) {
     ChorusRuntime runtime;
-    runtime.test_use_preparation_workers(1);
+    ChorusRuntimeTestHooks::use_preparation_workers(runtime, 1);
     auto engine = std::make_unique<PreparationEngine>();
     auto* observed = engine.get();
     auto service = engine->service;
@@ -876,9 +877,10 @@ TEST(RuntimePreparation, Cancellation_after_candidate_is_parked_prevents_publica
     auto admitted = runtime.load_engine(std::make_unique<PreparationEngine>(), {});
     ASSERT_TRUE(admitted.ok());
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-    while (!runtime.test_load_parked(admitted.load_id) && std::chrono::steady_clock::now() < deadline)
+    while (!ChorusRuntimeTestHooks::load_parked(runtime, admitted.load_id) &&
+           std::chrono::steady_clock::now() < deadline)
         std::this_thread::yield();
-    ASSERT_TRUE(runtime.test_load_parked(admitted.load_id));
+    ASSERT_TRUE(ChorusRuntimeTestHooks::load_parked(runtime, admitted.load_id));
     ASSERT_FALSE(runtime.is_loaded());
     ASSERT_EQ(runtime.active_load_id(), admitted.load_id);
     ASSERT_TRUE(runtime.cancel_load(admitted.load_id));
@@ -910,9 +912,10 @@ TEST(RuntimePreparation, Cancellation_accepted_before_provider_failure_wins_and_
     auto failed_admission = runtime.load_engine(std::move(next), {});
     ASSERT_TRUE(failed_admission.ok());
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-    while (!runtime.test_load_committed(failed_admission.load_id) && std::chrono::steady_clock::now() < deadline)
+    while (!ChorusRuntimeTestHooks::load_committed(runtime, failed_admission.load_id) &&
+           std::chrono::steady_clock::now() < deadline)
         std::this_thread::yield();
-    ASSERT_TRUE(runtime.test_load_committed(failed_admission.load_id));
+    ASSERT_TRUE(ChorusRuntimeTestHooks::load_committed(runtime, failed_admission.load_id));
     ASSERT_EQ(runtime.active_load_id(), failed_admission.load_id);
     ASSERT_FALSE(runtime.cancel_load(failed_admission.load_id));
     ASSERT_EQ(runtime.load_engine(std::make_unique<PreparationEngine>(), {}).error, ChorusError::InvalidRequest);
@@ -994,13 +997,14 @@ TEST(RuntimePreparation, Partial_initialization_failures_fence_resources_before_
             ++cleanup->destructions;
         };
         if (failure == Failure::WorkerStart)
-            runtime.test_fail_next_preparation_worker_start();
+            ChorusRuntimeTestHooks::fail_next_preparation_worker_start(runtime);
         auto admitted = runtime.load_engine(std::move(candidate), {});
         ASSERT_TRUE(admitted.ok());
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-        while (!runtime.test_load_committed(admitted.load_id) && std::chrono::steady_clock::now() < deadline)
+        while (!ChorusRuntimeTestHooks::load_committed(runtime, admitted.load_id) &&
+               std::chrono::steady_clock::now() < deadline)
             std::this_thread::yield();
-        ASSERT_TRUE(runtime.test_load_committed(admitted.load_id));
+        ASSERT_TRUE(ChorusRuntimeTestHooks::load_committed(runtime, admitted.load_id));
         ASSERT_EQ(runtime.active_load_id(), admitted.load_id);
         ASSERT_EQ(cleanup->shutdowns.load(), 1);
         ASSERT_EQ(cleanup->destructions.load(), 1);
@@ -1041,7 +1045,7 @@ TEST(RuntimePreparation, Partial_initialization_failures_fence_resources_before_
 
 TEST(RuntimePreparation, Failed_load_setup_and_exhausted_identity_preserve_the_loaded_engine) {
     ChorusRuntime failed_start;
-    failed_start.test_fail_next_worker_start();
+    ChorusRuntimeTestHooks::fail_next_worker_start(failed_start);
     auto rejected_start = failed_start.load_engine(std::make_unique<PreparationEngine>(), {});
     ASSERT_EQ(rejected_start.error, ChorusError::Unknown);
     ASSERT_EQ(rejected_start.load_id, -1);
@@ -1049,14 +1053,14 @@ TEST(RuntimePreparation, Failed_load_setup_and_exhausted_identity_preserve_the_l
     ASSERT_TRUE(load_runtime(failed_start, std::make_unique<PreparationEngine>(), {}).ok());
     auto current = failed_start.submit(raw("still usable"));
     ASSERT_TRUE(current.ok());
-    failed_start.test_fail_next_load_setup();
+    ChorusRuntimeTestHooks::fail_next_load_setup(failed_start);
     auto rejected_setup = failed_start.load_engine(std::make_unique<PreparationEngine>(), {});
     ASSERT_EQ(rejected_setup.error, ChorusError::Unknown);
     ASSERT_EQ(rejected_setup.load_id, -1);
     ASSERT_FALSE(failed_start.active_load_id());
     ASSERT_TRUE(failed_start.is_loaded());
     ASSERT_EQ(drain_runtime_events(failed_start)[0].request_id, current.request_id);
-    failed_start.test_exhaust_load_ids();
+    ChorusRuntimeTestHooks::exhaust_load_ids(failed_start);
     auto exhausted = failed_start.load_engine(std::make_unique<PreparationEngine>(), {});
     ASSERT_EQ(exhausted.error, ChorusError::InvalidRequest);
     ASSERT_EQ(exhausted.load_id, -1);
@@ -1081,9 +1085,10 @@ TEST(RuntimePreparation, Parked_candidate_that_loses_health_is_cleaned_up_before
     auto admitted = runtime.load_engine(std::move(candidate), {});
     ASSERT_TRUE(admitted.ok());
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-    while (!runtime.test_load_parked(admitted.load_id) && std::chrono::steady_clock::now() < deadline)
+    while (!ChorusRuntimeTestHooks::load_parked(runtime, admitted.load_id) &&
+           std::chrono::steady_clock::now() < deadline)
         std::this_thread::yield();
-    ASSERT_TRUE(runtime.test_load_parked(admitted.load_id));
+    ASSERT_TRUE(ChorusRuntimeTestHooks::load_parked(runtime, admitted.load_id));
     healthy->store(false);
     auto observed = wait_load_terminal(runtime, std::move(admitted));
     ASSERT_EQ(observed.error, ChorusError::EngineNotReady);
@@ -1096,7 +1101,7 @@ TEST(RuntimePreparation, Parked_candidate_that_loses_health_is_cleaned_up_before
 
 TEST(RuntimePreparation, Acceptance_closes_old_preparation_before_worker_retires_it) {
     ChorusRuntime runtime;
-    runtime.test_use_preparation_workers(1);
+    ChorusRuntimeTestHooks::use_preparation_workers(runtime, 1);
     auto old = std::make_unique<PreparationEngine>();
     auto service = old->service;
     service->gate_at = 1;
@@ -1106,17 +1111,17 @@ TEST(RuntimePreparation, Acceptance_closes_old_preparation_before_worker_retires
     ASSERT_TRUE(service->wait_entered());
     auto queued = runtime.count_message_tokens(MessageContent::text("queued"));
     ASSERT_TRUE(first.ok() && queued.ok());
-    runtime.test_hold_next_retirement();
+    ChorusRuntimeTestHooks::hold_next_retirement(runtime);
     ReleaseRuntimeRetirement release_retirement{runtime};
     auto admitted = runtime.load_engine(std::make_unique<PreparationEngine>(), {});
     ASSERT_TRUE(admitted.ok());
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-    while (!runtime.test_retirement_held() && std::chrono::steady_clock::now() < deadline)
+    while (!ChorusRuntimeTestHooks::retirement_held(runtime) && std::chrono::steady_clock::now() < deadline)
         std::this_thread::yield();
-    const bool held = runtime.test_retirement_held();
+    const bool held = ChorusRuntimeTestHooks::retirement_held(runtime);
     if (!held) {
         service->release();
-        runtime.test_release_retirement();
+        ChorusRuntimeTestHooks::release_retirement(runtime);
     }
     ASSERT_TRUE(held);
     auto progress = runtime.poll();
@@ -1127,7 +1132,7 @@ TEST(RuntimePreparation, Acceptance_closes_old_preparation_before_worker_retires
         std::lock_guard lock(service->mutex);
         ASSERT_EQ(service->count_calls, 1U);
     }
-    runtime.test_release_retirement();
+    ChorusRuntimeTestHooks::release_retirement(runtime);
     auto observed = wait_load_terminal(runtime, std::move(admitted));
     ASSERT_TRUE(observed.ok());
     std::erase_if(observed.events, [](const auto& event) {
@@ -1209,7 +1214,7 @@ TEST(RuntimePreparation, Reload_joins_gated_preparation_before_old_destruction_a
 
 TEST(RuntimePreparation, Buffered_preparation_success_and_cancelled_chat_drain_after_engine_teardown) {
     ChorusRuntime runtime;
-    runtime.test_use_preparation_workers(1);
+    ChorusRuntimeTestHooks::use_preparation_workers(runtime, 1);
     auto engine = std::make_unique<PreparationEngine>();
     auto service = engine->service;
     service->gate_at = 2;

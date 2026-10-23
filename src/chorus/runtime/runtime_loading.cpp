@@ -35,26 +35,20 @@ LoadSubmitResult ChorusRuntime::load_engine(std::unique_ptr<InferenceEngine> eng
         attempt->config = config;
         attempt->engine = std::move(engine);
         attempt->id = _next_load_id;
-#ifdef CHORUS_HOST_TEST
         attempt->test_hold_retirement = _test_hold_next_retirement && _lifetime != nullptr;
         attempt->test_fail_preparation_worker_start = _test_fail_next_preparation_worker_start;
         if (_test_preparation_workers)
             attempt->preparation_workers = _test_preparation_workers;
-#endif
         if (_lifetime)
             _draining_states.reserve(_draining_states.size() + 1);
-#ifdef CHORUS_HOST_TEST
         if (std::exchange(_test_fail_next_load_setup, false))
             throw std::runtime_error("Test load setup failure.");
-#endif
         if (!_loading) {
             auto state = std::make_unique<LoadingState>();
             _loading = std::move(state);
             try {
-#ifdef CHORUS_HOST_TEST
                 if (std::exchange(_test_fail_next_worker_start, false))
                     throw std::runtime_error("Test lifecycle worker start failure.");
-#endif
                 _loading->worker = std::thread(&ChorusRuntime::lifecycle_loop, this);
             } catch (...) {
                 _loading.reset();
@@ -75,10 +69,8 @@ LoadSubmitResult ChorusRuntime::load_engine(std::unique_ptr<InferenceEngine> eng
                 }
                 preparation.cv.notify_all();
             }
-#ifdef CHORUS_HOST_TEST
             _test_hold_next_retirement = false;
             _test_fail_next_preparation_worker_start = false;
-#endif
             _engine_failure_reported = false;
             _loading->attempt = std::move(attempt);
             ++_next_load_id;
@@ -114,67 +106,6 @@ std::optional<LoadId> ChorusRuntime::active_load_id() const {
     return _loading->attempt ? std::optional<LoadId>{_loading->attempt->id} : std::nullopt;
 }
 
-#ifdef CHORUS_HOST_TEST
-void ChorusRuntime::test_fail_next_load_setup() {
-    assert_host_thread();
-    _test_fail_next_load_setup = true;
-}
-void ChorusRuntime::test_fail_next_worker_start() {
-    assert_host_thread();
-    _test_fail_next_worker_start = true;
-}
-void ChorusRuntime::test_fail_next_preparation_worker_start() {
-    assert_host_thread();
-    _test_fail_next_preparation_worker_start = true;
-}
-void ChorusRuntime::test_use_preparation_workers(size_t count) {
-    assert_host_thread();
-    _test_preparation_workers = count;
-}
-bool ChorusRuntime::test_load_parked(LoadId id) const {
-    assert_host_thread();
-    if (!_loading)
-        return false;
-    std::lock_guard lock(_loading->mutex);
-    const auto& attempt = _loading->attempt;
-    return attempt && attempt->id == id && attempt->parked && !attempt->committed;
-}
-bool ChorusRuntime::test_load_committed(LoadId id) const {
-    assert_host_thread();
-    if (!_loading)
-        return false;
-    std::lock_guard lock(_loading->mutex);
-    const auto& attempt = _loading->attempt;
-    return attempt && attempt->id == id && attempt->committed;
-}
-void ChorusRuntime::test_exhaust_load_ids() {
-    assert_host_thread();
-    _next_load_id = std::numeric_limits<LoadId>::max();
-}
-void ChorusRuntime::test_hold_next_retirement() {
-    assert_host_thread();
-    _test_hold_next_retirement = true;
-}
-bool ChorusRuntime::test_retirement_held() const {
-    assert_host_thread();
-    if (!_loading)
-        return false;
-    std::lock_guard lock(_loading->mutex);
-    return _loading->attempt && _loading->attempt->test_retirement_held;
-}
-void ChorusRuntime::test_release_retirement() {
-    assert_host_thread();
-    if (!_loading)
-        return;
-    {
-        std::lock_guard lock(_loading->mutex);
-        if (_loading->attempt)
-            _loading->attempt->test_hold_retirement = false;
-    }
-    _loading->cv.notify_all();
-}
-#endif
-
 void ChorusRuntime::retire_lifetime(EngineLifetime& lifetime) {
     close_preparation(*lifetime.preparation);
     fence_engine(lifetime);
@@ -203,7 +134,6 @@ void ChorusRuntime::lifecycle_loop() {
                     attempt->progress_high_water = attempt->progress;
                 }
                 _wakeup->raise();
-#ifdef CHORUS_HOST_TEST
                 {
                     std::unique_lock guard(state.mutex);
                     if (attempt->test_hold_retirement) {
@@ -215,7 +145,6 @@ void ChorusRuntime::lifecycle_loop() {
                         attempt->test_retirement_held = false;
                     }
                 }
-#endif
                 retire_lifetime(*attempt->retiring);
                 attempt->retiring.reset();
             }
@@ -271,10 +200,8 @@ void ChorusRuntime::lifecycle_loop() {
                     prep.model_info = attempt->candidate->engine->loaded_model_info();
                     prep.failed = false;
                     prep.closing = false;
-#ifdef CHORUS_HOST_TEST
                     if (attempt->test_fail_preparation_worker_start)
                         throw std::runtime_error("Test preparation worker startup failure.");
-#endif
                     for (size_t worker = 0; worker < attempt->preparation_workers; ++worker)
                         prep.workers.emplace_back(&ChorusRuntime::preparation_loop, attempt->candidate->preparation);
                     usable = true;

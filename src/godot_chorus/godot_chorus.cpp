@@ -370,18 +370,6 @@ Ref<ChorusLoadResult> GodotChorus::load_model() {
     return result;
 }
 
-#ifdef CHORUS_HOST_TEST
-void GodotChorus::test_hold_next_retirement() {
-    _runtime.test_hold_next_retirement();
-}
-bool GodotChorus::test_retirement_held() const {
-    return _runtime.test_retirement_held();
-}
-void GodotChorus::test_release_retirement() {
-    _runtime.test_release_retirement();
-}
-#endif
-
 bool GodotChorus::cancel_load(int64_t load_id) {
     return _runtime.cancel_load(load_id);
 }
@@ -899,11 +887,6 @@ void GodotChorus::_bind_methods() {
 
     // Runtime methods
     ClassDB::bind_method(D_METHOD("load_model"), &GodotChorus::load_model);
-#ifdef CHORUS_HOST_TEST
-    ClassDB::bind_method(D_METHOD("test_hold_next_retirement"), &GodotChorus::test_hold_next_retirement);
-    ClassDB::bind_method(D_METHOD("test_retirement_held"), &GodotChorus::test_retirement_held);
-    ClassDB::bind_method(D_METHOD("test_release_retirement"), &GodotChorus::test_release_retirement);
-#endif
     ClassDB::bind_method(D_METHOD("cancel_load", "load_id"), &GodotChorus::cancel_load);
     ClassDB::bind_method(D_METHOD("get_active_load_id"), &GodotChorus::get_active_load_id);
     ClassDB::bind_method(D_METHOD("stop_all"), &GodotChorus::stop_all);

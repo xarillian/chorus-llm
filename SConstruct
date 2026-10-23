@@ -31,7 +31,6 @@ if missing_submodules:
 use_vulkan = ARGUMENTS.pop("use_vulkan", "no") == "yes"
 use_metal = ARGUMENTS.pop("use_metal", "no") == "yes"
 native = ARGUMENTS.pop("native", "no") == "yes"
-host_test = ARGUMENTS.pop("host_test", "no") == "yes"
 # ThreadSanitizer cannot run alongside the others; AddressSanitizer and UBSan share a build.
 SANITIZERS = {"thread": "thread", "address": "address,undefined"}
 sanitize = ARGUMENTS.pop("sanitize", "")
@@ -74,8 +73,6 @@ llama_build_dir = os.path.relpath(
 print(f">>> [SCons] llama.cpp source: {llama_source_dir}")
 print(f">>> [SCons] llama.cpp {llama_build_identity} {llama_variant} build: {os.path.abspath(llama_build_dir)}")
 
-if host_test:
-    env.Append(CPPDEFINES=["CHORUS_HOST_TEST"])
 env["use_vulkan"] = use_vulkan
 env["use_metal"] = use_metal
 env["llama_build_dir"] = llama_build_dir
@@ -213,7 +210,7 @@ sources_googletest = ["bin/obj/googletest/src/gtest-all.cc"]
 # One helper keeps the real test build and clangd flags identical.
 def make_test_env(base_env):
     test_env = base_env.Clone()
-    test_env.Append(CPPDEFINES=["TEST_BUILD", "CHORUS_HOST_TEST"])
+    test_env.Append(CPPDEFINES=["TEST_BUILD"])
     if base_env.get("use_vulkan", False):
         test_env.Append(CPPDEFINES=["CHORUS_TEST_VULKAN"])
     if base_env["platform"] == "windows":

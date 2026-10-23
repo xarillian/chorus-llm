@@ -193,18 +193,6 @@ class ChorusRuntime {
 
     /// Returns an outstanding load ID until its terminal is drained.
     std::optional<LoadId> active_load_id() const;
-#ifdef CHORUS_HOST_TEST
-    void test_hold_next_retirement();
-    bool test_retirement_held() const;
-    void test_release_retirement();
-    void test_fail_next_load_setup();
-    void test_fail_next_worker_start();
-    void test_fail_next_preparation_worker_start();
-    void test_use_preparation_workers(size_t count);
-    bool test_load_parked(LoadId id) const;
-    bool test_load_committed(LoadId id) const;
-    void test_exhaust_load_ids();
-#endif
 
     // Whether an initialized engine is ready to accept work.
     bool is_loaded() const;
@@ -398,6 +386,7 @@ class ChorusRuntime {
     void stop_all();
 
   private:
+    friend struct ChorusRuntimeTestHooks;
     void assert_host_thread() const;
     struct Control;
     struct PreparationJob;
@@ -483,13 +472,11 @@ class ChorusRuntime {
     std::unique_ptr<EngineLifetime> _lifetime;
     std::unique_ptr<LoadingState> _loading;
     LoadId _next_load_id = 0;
-#ifdef CHORUS_HOST_TEST
     bool _test_hold_next_retirement = false;
     bool _test_fail_next_load_setup = false;
     bool _test_fail_next_worker_start = false;
     bool _test_fail_next_preparation_worker_start = false;
     size_t _test_preparation_workers = 0;
-#endif
     std::vector<std::shared_ptr<PreparationState>> _draining_states;
 
     std::shared_ptr<LogChannel> _log_channel = std::make_shared<LogChannel>();
