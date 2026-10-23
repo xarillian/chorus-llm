@@ -29,7 +29,7 @@ Negative:
 - Preparation outcomes publish only in admission order.
 - A worker that fails must still complete its ticket so later outcomes are not stranded.
 - Replacement and shutdown join every preparation worker before releasing provider resources.
-- Tests that depend on work remaining queued fix the worker count through `ChorusRuntime::test_use_preparation_workers`.
+- Tests that depend on work remaining queued fix the worker count through `ChorusRuntimeTestHooks::use_preparation_workers`.
 
 ## Notes
 

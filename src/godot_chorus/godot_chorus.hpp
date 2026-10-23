@@ -99,11 +99,6 @@ class GodotChorus : public godot::Node {
      * with `Chorus::ChorusError::Cancelled`.
      */
     godot::Ref<ChorusLoadResult> load_model();
-#ifdef CHORUS_HOST_TEST
-    void test_hold_next_retirement();
-    bool test_retirement_held() const;
-    void test_release_retirement();
-#endif
     bool cancel_load(int64_t load_id);
     int64_t get_active_load_id() const;
     void stop_all();
