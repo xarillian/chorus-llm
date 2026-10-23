@@ -302,7 +302,7 @@ SubmitResult ChorusRuntime::admit(std::unique_ptr<PreparationJob> job, MessageNo
     }
     if (changed_history)
         _histories.at(session.value()).messages = std::move(changed_history);
-    if (result.response_message_id)
+    if (result.request_message_id)
         _next_message_id = *result.response_message_id == INT64_MAX
                                ? std::nullopt
                                : std::optional<MessageId>{*result.response_message_id + 1};
