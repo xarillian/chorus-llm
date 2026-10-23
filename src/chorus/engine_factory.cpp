@@ -16,11 +16,14 @@ std::unique_ptr<InferenceEngine> make_engine(Provider provider) {
     return nullptr; // unreachable for valid enum values; silences -Wreturn-type
 }
 
-InitialModelSpec make_initial_model_spec(Provider provider, std::string model_id, std::string model_source) {
+std::variant<InitialModelSpec, RequestRejection>
+make_initial_model_spec(Provider provider, std::string model_id, std::string model_source) {
     switch (provider) {
     case Provider::Echo:
-        return {};
+        return InitialModelSpec{};
     case Provider::Llama:
+        if (model_source.empty())
+            return RequestRejection{ChorusError::InvalidRequest, "The Llama provider requires a model path."};
         InitialModelSpec spec;
         spec.model_id = std::move(model_id);
         spec.format = ModelFormat::Gguf;

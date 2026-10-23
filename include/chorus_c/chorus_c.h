@@ -229,7 +229,7 @@ typedef struct chorus_load_result {
     const char* message;
 } chorus_load_result;
 
-/* model_path may be NULL only for CHORUS_PROVIDER_ECHO. CHORUS_OK means an admission result was produced. */
+/* model_path may be NULL or empty only for CHORUS_PROVIDER_ECHO. CHORUS_OK means an admission result was produced. */
 CHORUS_API chorus_error chorus_load(
     chorus_runtime* rt,
     chorus_provider provider,

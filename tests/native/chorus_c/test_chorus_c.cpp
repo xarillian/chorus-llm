@@ -328,6 +328,18 @@ TEST(ChorusC, Request_event_snapshot_survives_load_submission_and_log_poll) {
     chorus_stop_all(runtime.get());
 }
 
+TEST(ChorusC, Empty_model_path_is_rejected_before_it_can_replace_the_loaded_engine) {
+    RuntimePtr runtime = loaded_runtime();
+    chorus_load_result result{};
+    ASSERT_EQ(
+        chorus_load(runtime.get(), CHORUS_PROVIDER_LLAMA, "", nullptr, CHORUS_LOG_OFF, &result),
+        CHORUS_ERR_INVALID_REQUEST
+    );
+    ASSERT_EQ(result.load_id, -1);
+    ASSERT_EQ(chorus_active_load_id(runtime.get()), -1);
+    ASSERT_TRUE(chorus_is_loaded(runtime.get()));
+}
+
 TEST(ChorusC, Missing_model_fails_after_admission_and_diagnostic_survives_other_calls) {
     RuntimePtr runtime = loaded_runtime();
     chorus_load_result result{};
