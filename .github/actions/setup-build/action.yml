@@ -31,9 +31,11 @@ runs:
       with:
         just-version: 1.58.0
 
-    - name: Install MSVC (Windows)
+    # The runner image installs MSVC but leaves cl.exe, INCLUDE and LIB to vcvars64.bat.
+    - name: Load the MSVC environment (Windows)
       if: runner.os == 'Windows'
-      uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      shell: pwsh
+      run: '& "$env:GITHUB_ACTION_PATH\load-msvc-environment.ps1"'
 
     - name: Install LLVM (macOS)
       if: runner.os == 'macOS'
