@@ -1,5 +1,5 @@
 diff --git a/common/chat.cpp b/common/chat.cpp
-index 87f1e99..e72ae2d 100644
+index 99ed74f..afc9267 100644
 --- a/common/chat.cpp
 +++ b/common/chat.cpp
 @@ -36,7 +36,12 @@ using json = common_json;
@@ -17,10 +17,10 @@ index 87f1e99..e72ae2d 100644
      ss << std::put_time(&local_time, format.c_str());
      auto res = ss.str();
 diff --git a/common/jinja/value.cpp b/common/jinja/value.cpp
-index 6edd8b9..cba1933 100644
+index 0840e05..380b726 100644
 --- a/common/jinja/value.cpp
 +++ b/common/jinja/value.cpp
-@@ -425,7 +425,13 @@ const func_builtins & global_builtins() {
+@@ -437,7 +437,13 @@ const func_builtins & global_builtins() {
              // get current time
              // TODO: make sure this is the same behavior as Python's strftime
              char buf[100];
@@ -36,7 +36,7 @@ index 6edd8b9..cba1933 100644
              } else {
                  throw raised_exception("strftime_now: failed to format time");
 diff --git a/ggml/CMakeLists.txt b/ggml/CMakeLists.txt
-index 3eacd4c..6f3f7cb 100644
+index 35252a8..11b2f2b 100644
 --- a/ggml/CMakeLists.txt
 +++ b/ggml/CMakeLists.txt
 @@ -10,6 +10,7 @@ set(GGML_VERSION_BASE "${GGML_VERSION_MAJOR}.${GGML_VERSION_MINOR}.${GGML_VERSIO
@@ -57,7 +57,7 @@ index 3eacd4c..6f3f7cb 100644
  
  if(NOT GGML_BUILD_COMMIT)
 diff --git a/src/llama-batch.cpp b/src/llama-batch.cpp
-index 3c4b520..eb0e2f3 100644
+index 321aa9d..9eeefb3 100644
 --- a/src/llama-batch.cpp
 +++ b/src/llama-batch.cpp
 @@ -9,6 +9,7 @@
@@ -68,7 +68,7 @@ index 3c4b520..eb0e2f3 100644
  #include <algorithm>
  #include <sstream>
  
-@@ -1480,8 +1481,9 @@ void llama_batch_compat::init(llama_batch_ext & dst, const llama_batch & batch_i
+@@ -1484,8 +1485,9 @@ void llama_batch_compat::init(llama_batch_ext & dst, const llama_batch & batch_i
  }
  
  llama_batch_compat::llama_batch_compat(llama_context * ctx, const llama_batch & batch_inp, size_t n_embd_row) {
@@ -81,10 +81,10 @@ index 3c4b520..eb0e2f3 100644
  
  llama_batch_compat::~llama_batch_compat() {
 diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
-index 6cc0b20..cfa4673 100644
+index 066e69e..e55b62c 100644
 --- a/src/llama-model-loader.cpp
 +++ b/src/llama-model-loader.cpp
-@@ -1518,11 +1518,43 @@ bool llama_model_loader::load_all_data(
+@@ -1585,11 +1585,43 @@ bool llama_model_loader::load_all_data(
      // Buffer size: balance between memory usage and I/O efficiency
      const size_t buffer_size = alignment != 1 ? LLAMA_DIRECT_IO_BUFFER_SIZE + 2 * alignment : 1 * 1024 * 1024;
  
@@ -132,7 +132,7 @@ index 6cc0b20..cfa4673 100644
          if (use_mmap || check_tensors) {
              return nullptr;
          }
-@@ -1565,25 +1597,25 @@ bool llama_model_loader::load_all_data(
+@@ -1632,25 +1664,25 @@ bool llama_model_loader::load_all_data(
  
          // If the backend is supported, create pinned memory buffers and events for synchronisation.
          for (size_t idx = 0; idx < n_buffers; ++idx) {
@@ -165,7 +165,7 @@ index 6cc0b20..cfa4673 100644
          }
  
          ggml_backend_t backend = ggml_backend_dev_init(dev, nullptr);
-@@ -1593,6 +1625,7 @@ bool llama_model_loader::load_all_data(
+@@ -1660,6 +1692,7 @@ bool llama_model_loader::load_all_data(
              return nullptr;
          }
  
@@ -173,7 +173,7 @@ index 6cc0b20..cfa4673 100644
          return backend;
      }(__func__);
  
-@@ -1748,16 +1781,7 @@ bool llama_model_loader::load_all_data(
+@@ -1821,16 +1854,7 @@ bool llama_model_loader::load_all_data(
  
          size_done += n_size;
      }

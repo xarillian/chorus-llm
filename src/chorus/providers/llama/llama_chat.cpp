@@ -69,7 +69,7 @@ std::variant<LlamaChatRender, RequestRejection> render_llama_chat(
     try {
         common_chat_params params = common_chat_templates_apply(selected_chat_templates, inputs);
         LlamaChatRender render;
-        render.prompt = std::move(params.prompt);
+        render.prompt = params.prompt.str();
         render.template_stop_sequences = std::move(params.additional_stops);
         render.supports_thinking = params.supports_thinking;
         render.parser_params = common_chat_parser_params(params);
